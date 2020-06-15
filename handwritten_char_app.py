@@ -14,22 +14,22 @@ from PyQt5 import QtCore, QtGui
 class PaintZone(Qtw.QWidget):
     """ Paint zone widget, 140x140 px high and wide, allowing the user to draw
     (must be a number between 0 and 9) 
-    Based on www.learnpyqt.com/courses/custom-widgets/bitmap-graphics/ tutorial """
+    Based on https://www.learnpyqt.com/courses/custom-widgets/bitmap-graphics/ """
     def __init__(self):
         super().__init__()
         self.painterLayout=Qtw.QGridLayout(self)
         self.setLayout(self.painterLayout)
 
         self.painterWid = Qtw.QLabel()
-        canvas = QtGui.QPixmap(140, 140)
-        canvas.fill(QtGui.QColor('#ffffff')) #fill with white, otherwise appears black
-        self.painterWid.setPixmap(canvas)
+        self.canvas = QtGui.QPixmap(140, 140) #
+        self.canvas.fill(QtGui.QColor('#ffffff')) #Fill with white, otherwise paint zone appears black
+        self.painterWid.setPixmap(self.canvas)
 
         self.last_x, self.last_y = None, None
 
         # Showing canvas #
         self.painterLayout.addWidget(self.painterWid)
-        self.painterWid.setAlignment(QtCore.Qt.AlignCenter)
+        self.painterWid.setAlignment(QtCore.Qt.AlignCenter) #Bug: centering widget does not center the "brush proc zone"
 
         # Showing "Reset" button #
         self.resetButton=Qtw.QPushButton('Reset', self)
@@ -37,10 +37,10 @@ class PaintZone(Qtw.QWidget):
         self.resetButton.clicked.connect(self.on_click_reset)
 
     def mouseMoveEvent(self, e):
-        if self.last_x is None: # First event.
+        if self.last_x is None: #First event
             self.last_x = e.x()
             self.last_y = e.y()
-            return # Ignore the first time.
+            return #Ignore the first time
 
         painter = QtGui.QPainter(self.painterWid.pixmap())
         defaultPen=painter.pen()
@@ -59,7 +59,8 @@ class PaintZone(Qtw.QWidget):
         self.last_y = None
 
     def on_click_reset(self):
-        print("Resetting done")
+        self.canvas.fill(QtGui.QColor('#ffffff'))
+        self.painterWid.setPixmap(self.canvas)
 
     
 
