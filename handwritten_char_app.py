@@ -14,7 +14,7 @@ from PyQt5 import QtCore, QtGui
 class PaintZone(Qtw.QWidget):
     """ Paint zone widget, 140x140 px high and wide, allowing the user to draw
     (must be a number between 0 and 9) 
-    Based on https://www.learnpyqt.com/courses/custom-widgets/bitmap-graphics/ """
+    Based on www.learnpyqt.com/courses/custom-widgets/bitmap-graphics/ """
     def __init__(self):
         super().__init__()
         self.painterLayout=Qtw.QGridLayout(self)
