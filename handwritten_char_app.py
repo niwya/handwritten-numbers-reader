@@ -26,7 +26,11 @@ def train_NN(model, epochs):
     val_loss, val_acc=model.evaluate(x_test, y_test)
     print(val_loss, val_acc)
 
-## Processing images in order to feed them to NN
+## Processing images in order to feed them to NN ##
+
+def process_img():
+    """ Must return a 28x28 px image ready to feed to NN (scale ratio : /50) """
+
 
 
 ## Application layout ##
@@ -34,51 +38,48 @@ def train_NN(model, epochs):
 class PaintZone(Qtw.QWidget):
     """ Paint zone widget, 140x140 px high and wide, allowing the user to draw
     (must be a number between 0 and 9) 
-    Based on www.learnpyqt.com/courses/custom-widgets/bitmap-graphics/ """
+    Based on stackoverflow.com/questions/48046462/pyqt5-i-save-the-image-but-it-is-always-empty """
     def __init__(self):
         super().__init__()
-        self.painterLayout=Qtw.QGridLayout(self)
-        self.setLayout(self.painterLayout)
+        h = 140
+        w = 140
+        self.myPenWidth = 8
+        self.myPenColor = QtCore.Qt.black
+        self.image = QtGui.QImage(w, h, QtGui.QImage.Format_RGB32)
+        self.path = QtGui.QPainterPath()
+        self.clearImage()
 
-        self.painterWid = Qtw.QLabel()
-        self.canvas = QtGui.QPixmap(140, 140) #
-        self.canvas.fill(QtGui.QColor('#ffffff')) #Fill with white, otherwise paint zone appears black
-        self.painterWid.setPixmap(self.canvas)
-
-        self.last_x, self.last_y = None, None
-
-        # Showing canvas #
-        self.painterLayout.addWidget(self.painterWid)
-        #self.painterWid.setAlignment(QtCore.Qt.AlignCenter) #Bug: centering widget does not center the "brush proc zone"
-
-    def mouseMoveEvent(self, e):
-        if self.last_x is None: #First event
-            self.last_x = e.x()
-            self.last_y = e.y()
-            return #Ignore the first time
-
-        painter = QtGui.QPainter(self.painterWid.pixmap())
-        defaultPen=painter.pen()
-        defaultPen.setWidth(6)
-        painter.setPen(defaultPen)
-        painter.drawLine(self.last_x, self.last_y, e.x(), e.y())
-        painter.end()
+    def clearImage(self):
+        self.path = QtGui.QPainterPath()
+        self.image.fill(QtCore.Qt.white)
         self.update()
 
-        # Update the origin for next time.
-        self.last_x = e.x()
-        self.last_y = e.y()
+    def saveImage(self, fileName, fileFormat):
+        self.image.save(fileName, fileFormat)
 
-    def mouseReleaseEvent(self, e):
-        self.last_x = None
-        self.last_y = None
+    def paintEvent(self, event):
+        painter = QtGui.QPainter(self)
+        painter.drawImage(event.rect(), self.image, self.rect())
+
+    def mousePressEvent(self, event):
+        self.path.moveTo(event.pos())
+
+    def mouseMoveEvent(self, event):
+        self.path.lineTo(event.pos())
+        p = QtGui.QPainter(self.image)
+        p.setPen(QtGui.QPen(self.myPenColor,
+                      self.myPenWidth, QtCore.Qt.SolidLine, QtCore.Qt.RoundCap,
+                      QtCore.Qt.RoundJoin))
+        p.drawPath(self.path)
+        p.end()
+        self.update()
 
 
 class MainWindow(Qtw.QWidget):
     """ Main (and sole) window of the app """
     def __init__(self):
         super(Qtw.QWidget,self).__init__()
-
+        self.setFixedSize(400,210)
         self.setWindowTitle("Handwritten numbers reader")
         
         self.mainLayout=Qtw.QGridLayout(self)
@@ -93,34 +94,32 @@ class MainWindow(Qtw.QWidget):
         self.mainLayout.addWidget(self.pZone,1,0)
 
         # Showing result zone #
-        self.rZone=Qtw.QLabel('')
+        self.rZone=Qtw.QLabel('Hi')
         self.mainLayout.addWidget(self.rZone,1,1)
 
         # Showing "Read" push button #
         self.readButton=Qtw.QPushButton('Read', self)
         self.mainLayout.addWidget(self.readButton,2,0)
 
-        # Showing "Train NN"
+        # Showing "Train NN" push button #
         self.trainButton=Qtw.QPushButton('Train NN', self)
         self.mainLayout.addWidget(self.trainButton, 2, 1)
 
-
+        # Showing "Reset" push button # 
         self.resetButton=Qtw.QPushButton('Reset', self)
         self.mainLayout.addWidget(self.resetButton, 0, 1)
-        # Connecting button to click/enter key #
+
+        # Connecting buttons to click/enter key #
         self.readButton.clicked.connect(self.on_click_read)
         self.trainButton.clicked.connect(self.on_click_train)
         self.resetButton.clicked.connect(self.on_click_reset)
         self.readButtonShortcut=Qtw.QShortcut(QtGui.QKeySequence(QtCore.Qt.Key_Return), self.readButton)
         self.readButtonShortcut.activated.connect(self.on_click_read)
 
-        # Showing zone where to diplay result of neural network #
-        self.resultZone=Qtw.QWidget()
-
     def on_click_read(self):
         """ Feeds drawn character to neural network trained on
         MNIST database"""
-        print("Reading done")
+        self.pZone.saveImage("image.png", "PNG")
     
     def on_click_train(self):
         """ Trains NN used to recognize handwritten numbers
@@ -131,9 +130,8 @@ class MainWindow(Qtw.QWidget):
         train_NN(myModel,nTrainings)
 
     def on_click_reset(self):
-        self.pZone.canvas.fill(QtGui.QColor('#ffffff'))
-        self.pZone.painterWid.setPixmap(self.pZone.canvas)   
         self.rZone.setText('')
+        self.pZone.clearImage()
     
 
 if __name__ == '__main__':
