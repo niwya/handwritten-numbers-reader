@@ -1,6 +1,6 @@
 import sys
 import numpy as np
-#import tensorflow as tf
+import tensorflow as tf
 
 # App builder # 
 from PyQt5 import QtWidgets as Qtw
@@ -8,6 +8,26 @@ from PyQt5 import QtCore, QtGui
 
 
 ### Handwritten character reader ###
+
+## Training NN ## 
+
+def train_NN(model, epochs):
+    mnist=tf.keras.datasets.mnist
+    (x_train, y_train), (x_test, y_test) = mnist.load_data()
+    x_train=tf.keras.utils.normalize(x_train, axis=1)
+    x_test=tf.keras.utils.normalize(x_test, axis=1)
+    model=tf.keras.models.Sequential()
+    model.add(tf.keras.layers.Flatten()) 
+    model.add(tf.keras.layers.Dense(128, activation=tf.nn.relu)) 
+    model.add(tf.keras.layers.Dense(128, activation=tf.nn.relu))
+    model.add(tf.keras.layers.Dense(10, activation=tf.nn.softmax))
+    model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+    model.fit(x_train, y_train, epochs)
+    val_loss, val_acc=model.evaluate(x_test, y_test)
+    print(val_loss, val_acc)
+
+## Processing images in order to feed them to NN
+
 
 ## Application layout ##
 
@@ -29,12 +49,7 @@ class PaintZone(Qtw.QWidget):
 
         # Showing canvas #
         self.painterLayout.addWidget(self.painterWid)
-        self.painterWid.setAlignment(QtCore.Qt.AlignCenter) #Bug: centering widget does not center the "brush proc zone"
-
-        # Showing "Reset" button #
-        self.resetButton=Qtw.QPushButton('Reset', self)
-        self.painterLayout.addWidget(self.resetButton, 1, 0)
-        self.resetButton.clicked.connect(self.on_click_reset)
+        #self.painterWid.setAlignment(QtCore.Qt.AlignCenter) #Bug: centering widget does not center the "brush proc zone"
 
     def mouseMoveEvent(self, e):
         if self.last_x is None: #First event
@@ -58,12 +73,6 @@ class PaintZone(Qtw.QWidget):
         self.last_x = None
         self.last_y = None
 
-    def on_click_reset(self):
-        self.canvas.fill(QtGui.QColor('#ffffff'))
-        self.painterWid.setPixmap(self.canvas)
-
-    
-
 
 class MainWindow(Qtw.QWidget):
     """ Main (and sole) window of the app """
@@ -83,12 +92,25 @@ class MainWindow(Qtw.QWidget):
         self.pZone=PaintZone()
         self.mainLayout.addWidget(self.pZone,1,0)
 
+        # Showing result zone #
+        self.rZone=Qtw.QLabel('')
+        self.mainLayout.addWidget(self.rZone,1,1)
+
         # Showing "Read" push button #
         self.readButton=Qtw.QPushButton('Read', self)
         self.mainLayout.addWidget(self.readButton,2,0)
 
+        # Showing "Train NN"
+        self.trainButton=Qtw.QPushButton('Train NN', self)
+        self.mainLayout.addWidget(self.trainButton, 2, 1)
+
+
+        self.resetButton=Qtw.QPushButton('Reset', self)
+        self.mainLayout.addWidget(self.resetButton, 0, 1)
         # Connecting button to click/enter key #
         self.readButton.clicked.connect(self.on_click_read)
+        self.trainButton.clicked.connect(self.on_click_train)
+        self.resetButton.clicked.connect(self.on_click_reset)
         self.readButtonShortcut=Qtw.QShortcut(QtGui.QKeySequence(QtCore.Qt.Key_Return), self.readButton)
         self.readButtonShortcut.activated.connect(self.on_click_read)
 
@@ -96,9 +118,22 @@ class MainWindow(Qtw.QWidget):
         self.resultZone=Qtw.QWidget()
 
     def on_click_read(self):
-        """ on_click function feeds drawn character to neural network trained on
+        """ Feeds drawn character to neural network trained on
         MNIST database"""
         print("Reading done")
+    
+    def on_click_train(self):
+        """ Trains NN used to recognize handwritten numbers
+        number of epochs can be modified, could be fun to 
+        be able to choose nb of hidden layers too, and other parameters """
+        myModel=None
+        nTrainings=5
+        train_NN(myModel,nTrainings)
+
+    def on_click_reset(self):
+        self.pZone.canvas.fill(QtGui.QColor('#ffffff'))
+        self.pZone.painterWid.setPixmap(self.pZone.canvas)   
+        self.rZone.setText('')
     
 
 if __name__ == '__main__':
