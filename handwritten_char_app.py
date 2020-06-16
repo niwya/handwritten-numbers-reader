@@ -1,6 +1,8 @@
 import sys
+import os
 import numpy as np
 import tensorflow as tf
+import cv2
 
 # App builder # 
 from PyQt5 import QtWidgets as Qtw
@@ -28,9 +30,9 @@ def train_NN(model, epochs):
 
 ## Processing images in order to feed them to NN ##
 
-def process_img():
+def process_img(givenImage):
     """ Must return a 28x28 px image ready to feed to NN (scale ratio : /50) """
-
+    resizedImage=cv2.resize(cv2.imread(givenImage), dsize=(28,28), interpolation=cv2.INTER_NEAREST)
 
 
 ## Application layout ##
@@ -79,7 +81,7 @@ class MainWindow(Qtw.QWidget):
     """ Main (and sole) window of the app """
     def __init__(self):
         super(Qtw.QWidget,self).__init__()
-        self.setFixedSize(400,210)
+        self.setFixedSize(400,220)
         self.setWindowTitle("Handwritten numbers reader")
         
         self.mainLayout=Qtw.QGridLayout(self)
@@ -94,7 +96,7 @@ class MainWindow(Qtw.QWidget):
         self.mainLayout.addWidget(self.pZone,1,0)
 
         # Showing result zone #
-        self.rZone=Qtw.QLabel('Hi')
+        self.rZone=Qtw.QLabel('')
         self.mainLayout.addWidget(self.rZone,1,1)
 
         # Showing "Read" push button #
@@ -119,7 +121,8 @@ class MainWindow(Qtw.QWidget):
     def on_click_read(self):
         """ Feeds drawn character to neural network trained on
         MNIST database"""
-        self.pZone.saveImage("image.png", "PNG")
+        self.pZone.saveImage("image.jpeg", "JPEG")
+        process_img('image.jpeg')
     
     def on_click_train(self):
         """ Trains NN used to recognize handwritten numbers
@@ -132,7 +135,10 @@ class MainWindow(Qtw.QWidget):
     def on_click_reset(self):
         self.rZone.setText('')
         self.pZone.clearImage()
-    
+        try:
+            os.remove('image.jpeg')
+        except: None
+
 
 if __name__ == '__main__':
     app=Qtw.QApplication(sys.argv)
