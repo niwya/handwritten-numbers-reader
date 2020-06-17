@@ -4,6 +4,7 @@ import numpy as np
 import tensorflow as tf
 import cv2
 import matplotlib.pyplot as plt
+import idx2numpy
 
 # App builder # 
 from PyQt5 import QtWidgets as Qtw
@@ -21,7 +22,6 @@ def train_NN(model, epochs):
     (x_train, y_train), (x_test, y_test) = mnist.load_data()
     x_train=tf.keras.utils.normalize(x_train, axis=1)
     x_test=tf.keras.utils.normalize(x_test, axis=1)
-    model=tf.keras.models.Sequential()
     model.add(tf.keras.layers.Flatten()) 
     model.add(tf.keras.layers.Dense(128, activation=tf.nn.relu)) 
     model.add(tf.keras.layers.Dense(128, activation=tf.nn.relu))
@@ -38,17 +38,32 @@ def process_img(imagePath):
     resizedImage=cv2.resize(cv2.imread(imagePath,0), (28,28), interpolation=cv2.INTER_NEAREST)
     # Applying negative filter #
     resizedImage=cv2.bitwise_not(resizedImage) 
-    # Convert into an array: 28 entries of size 28 (each entry is a row) #
+    # Converting into an array: 28 entries of size 28 (each entry is a row) #
     arrayImage=np.asarray(resizedImage)
-    formattedImage=[]
-    formattedImage.append(0x00000803)
-    formattedImage.append(1)
-    formattedImage.append(28)
-    formattedImage.append(28)
-    for i in range(28):
-        for j in range(28):
-            formattedImage.append(arrayImage[i][j])
+    # Normalizing every value (instead of integers, real-valued inputs in [0;1]) #
+    arrayImage=tf.keras.utils.normalize(arrayImage, axis=1)
+    arrayImage=np.expand_dims(arrayImage,axis=0)
+    formattedImage=np.vstack([arrayImage])
+    #formattedImage=[]
+    #formattedImage.append(0x00000803)
+    #formattedImage.append(1)
+    #formattedImage.append(28)
+    #formattedImage.append(28)
+    #for i in range(28):
+        #for j in range(28):
+            #formattedImage.append(arrayImage[i][j])
+    #formattedImage=np.array(formattedImage)
+    #formattedImage=np.vstack(formattedImage)
     return formattedImage
+
+def search_maxindex(list):
+    maxindex=0
+    maxvalue=list[0]
+    for k in range(len(list)):
+        if list[k]>maxvalue:
+            maxindex=k
+            maxvalue=list[k]
+    return maxindex
 
 ## Application layout ##
 
@@ -100,7 +115,7 @@ class NNZone(Qtw.QWidget):
         self.setLayout(self.nnLayout)
 
         # Current model variable for NN # 
-        self.currentModelNNWid=None
+        self.currentModelNNWid=tf.keras.models.Sequential()
         self.epochNumber=5
 
         # Showing "Train NN" push button #
@@ -122,13 +137,10 @@ class MainWindow(Qtw.QWidget):
         super(Qtw.QWidget,self).__init__()
 
         # Graphic initialization #
-        self.setFixedSize(500,500)
+        self.setFixedSize(500,300)
         self.setWindowTitle("Handwritten numbers reader")
         self.mainLayout=Qtw.QGridLayout(self)
         self.setLayout(self.mainLayout)
-
-        # Current model variable for NN #
-        self.currentModel=None
 
         # Showing instuctions label #
         self.instructLabel=Qtw.QLabel("Draw a number between 0 and 9 in the box below. \nTry to center it as much as possible.")
@@ -145,6 +157,9 @@ class MainWindow(Qtw.QWidget):
         # Showing NN zone #
         self.nnZone=NNZone()
         self.mainLayout.addWidget(self.nnZone,2,1)
+
+        # Current model variable for NN #
+        self.currentModel=self.nnZone.currentModelNNWid
 
         # Showing "Read" push button #
         self.readButton=Qtw.QPushButton('Read', self)
@@ -163,11 +178,14 @@ class MainWindow(Qtw.QWidget):
     def on_click_read(self):
         """ Feeds drawn character to neural network trained on
         MNIST database"""
-        self.pZone.saveImage("image.jpeg", "JPEG")
-        toPredict=process_img('image.jpeg')
-        #self.currentModel=self.nnZone.currentModelNNWid
-        #result=self.nnZone.currentModelNNWid.predict(toPredict)
-        #self.rZone.setText(result)
+        try:
+            self.pZone.saveImage("image.jpeg", "JPEG")
+            toPredict=process_img('image.jpeg')
+            self.currentModel=self.nnZone.currentModelNNWid
+            result=self.nnZone.currentModelNNWid.predict(toPredict)
+            predictedNb=search_maxindex(result[0])
+            self.rZone.setText(str(predictedNb))
+        except: self.rZone.setText('NN not trained')
 
 
     def on_click_reset(self):
