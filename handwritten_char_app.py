@@ -3,11 +3,14 @@ import os
 import numpy as np
 import tensorflow as tf
 import cv2
+import matplotlib.pyplot as plt
 
 # App builder # 
 from PyQt5 import QtWidgets as Qtw
 from PyQt5 import QtCore, QtGui
 
+# Path of image to process - adapt to your use #
+path = r'C:\Users\Chloe\Documents\GitRepositories\Handwritten_num_reader\image.jpeg'
 
 ### Handwritten character reader ###
 
@@ -30,10 +33,22 @@ def train_NN(model, epochs):
 
 ## Processing images in order to feed them to NN ##
 
-def process_img(givenImage):
-    """ Must return a 28x28 px image ready to feed to NN (scale ratio : /50) """
-    resizedImage=cv2.resize(cv2.imread(givenImage), dsize=(28,28), interpolation=cv2.INTER_NEAREST)
-
+def process_img(imagePath):
+    """ Must return a 28x28 px image on the form of a list, ready to feed to NN (scale ratio : /50) """
+    resizedImage=cv2.resize(cv2.imread(imagePath,0), (28,28), interpolation=cv2.INTER_NEAREST)
+    # Applying negative filter #
+    resizedImage=cv2.bitwise_not(resizedImage) 
+    # Convert into an array: 28 entries of size 28 (each entry is a row) #
+    arrayImage=np.asarray(resizedImage)
+    formattedImage=[]
+    formattedImage.append(0x00000803)
+    formattedImage.append(1)
+    formattedImage.append(28)
+    formattedImage.append(28)
+    for i in range(28):
+        for j in range(28):
+            formattedImage.append(arrayImage[i][j])
+    return formattedImage
 
 ## Application layout ##
 
@@ -42,7 +57,7 @@ class PaintZone(Qtw.QWidget):
     (must be a number between 0 and 9) 
     Based on stackoverflow.com/questions/48046462/pyqt5-i-save-the-image-but-it-is-always-empty """
     def __init__(self):
-        super().__init__()
+        super(Qtw.QWidget,self).__init__()
         h = 140
         w = 140
         self.myPenWidth = 8
@@ -76,16 +91,44 @@ class PaintZone(Qtw.QWidget):
         p.end()
         self.update()
 
+class NNZone(Qtw.QWidget):
+    """ Widget used to input parameters and train the NN """
+    def __init__(self):
+        super(Qtw.QWidget,self).__init__()
+
+        self.nnLayout=Qtw.QGridLayout(self)
+        self.setLayout(self.nnLayout)
+
+        # Current model variable for NN # 
+        self.currentModelNNWid=None
+        self.epochNumber=5
+
+        # Showing "Train NN" push button #
+        self.trainButton=Qtw.QPushButton('Train NN', self)
+        self.nnLayout.addWidget(self.trainButton, 2, 2)
+
+        # Connecting button to click # 
+        self.trainButton.clicked.connect(self.on_click_train)
+
+    def on_click_train(self):
+        """ Trains NN used to recognize handwritten numbers
+        number of epochs can be modified, could be fun to 
+        be able to choose nb of hidden layers too, and other parameters """
+        train_NN(self.currentModelNNWid,self.epochNumber)
 
 class MainWindow(Qtw.QWidget):
     """ Main (and sole) window of the app """
     def __init__(self):
         super(Qtw.QWidget,self).__init__()
-        self.setFixedSize(400,220)
+
+        # Graphic initialization #
+        self.setFixedSize(500,500)
         self.setWindowTitle("Handwritten numbers reader")
-        
         self.mainLayout=Qtw.QGridLayout(self)
         self.setLayout(self.mainLayout)
+
+        # Current model variable for NN #
+        self.currentModel=None
 
         # Showing instuctions label #
         self.instructLabel=Qtw.QLabel("Draw a number between 0 and 9 in the box below. \nTry to center it as much as possible.")
@@ -99,13 +142,13 @@ class MainWindow(Qtw.QWidget):
         self.rZone=Qtw.QLabel('')
         self.mainLayout.addWidget(self.rZone,1,1)
 
+        # Showing NN zone #
+        self.nnZone=NNZone()
+        self.mainLayout.addWidget(self.nnZone,2,1)
+
         # Showing "Read" push button #
         self.readButton=Qtw.QPushButton('Read', self)
         self.mainLayout.addWidget(self.readButton,2,0)
-
-        # Showing "Train NN" push button #
-        self.trainButton=Qtw.QPushButton('Train NN', self)
-        self.mainLayout.addWidget(self.trainButton, 2, 1)
 
         # Showing "Reset" push button # 
         self.resetButton=Qtw.QPushButton('Reset', self)
@@ -113,7 +156,6 @@ class MainWindow(Qtw.QWidget):
 
         # Connecting buttons to click/enter key #
         self.readButton.clicked.connect(self.on_click_read)
-        self.trainButton.clicked.connect(self.on_click_train)
         self.resetButton.clicked.connect(self.on_click_reset)
         self.readButtonShortcut=Qtw.QShortcut(QtGui.QKeySequence(QtCore.Qt.Key_Return), self.readButton)
         self.readButtonShortcut.activated.connect(self.on_click_read)
@@ -122,15 +164,11 @@ class MainWindow(Qtw.QWidget):
         """ Feeds drawn character to neural network trained on
         MNIST database"""
         self.pZone.saveImage("image.jpeg", "JPEG")
-        process_img('image.jpeg')
-    
-    def on_click_train(self):
-        """ Trains NN used to recognize handwritten numbers
-        number of epochs can be modified, could be fun to 
-        be able to choose nb of hidden layers too, and other parameters """
-        myModel=None
-        nTrainings=5
-        train_NN(myModel,nTrainings)
+        toPredict=process_img('image.jpeg')
+        #self.currentModel=self.nnZone.currentModelNNWid
+        #result=self.nnZone.currentModelNNWid.predict(toPredict)
+        #self.rZone.setText(result)
+
 
     def on_click_reset(self):
         self.rZone.setText('')
