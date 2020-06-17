@@ -108,28 +108,40 @@ class PaintZone(Qtw.QWidget):
 
 class NNZone(Qtw.QWidget):
     """ Widget used to input parameters and train the NN """
-    def __init__(self):
+    def __init__(self,userModel):
         super(Qtw.QWidget,self).__init__()
 
         self.nnLayout=Qtw.QGridLayout(self)
         self.setLayout(self.nnLayout)
 
-        # Current model variable for NN # 
-        self.currentModelNNWid=tf.keras.models.Sequential()
+        # Current model variable for NN, chosen by user # 
+        self.currentModelNNWid=userModel
         self.epochNumber=5
+
+        # Textbox and its label for number of epochs input # 
+        self.epochsLabel=Qtw.QLabel('Desired # of epochs:')
+        self.nnLayout.addWidget(self.epochsLabel,0,2)
+        self.textboxEpochs=Qtw.QLineEdit(self)
+        self.nnLayout.addWidget(self.textboxEpochs, 1, 2)
 
         # Showing "Train NN" push button #
         self.trainButton=Qtw.QPushButton('Train NN', self)
         self.nnLayout.addWidget(self.trainButton, 2, 2)
 
-        # Connecting button to click # 
+        # Connecting button to click, textbox to enter key # 
         self.trainButton.clicked.connect(self.on_click_train)
+        self.readEpochsShortcut=Qtw.QShortcut(QtGui.QKeySequence(QtCore.Qt.Key_Return), self.textboxEpochs)
+        self.readEpochsShortcut.activated.connect(self.on_click_updateepochs)
 
     def on_click_train(self):
         """ Trains NN used to recognize handwritten numbers
         number of epochs can be modified, could be fun to 
         be able to choose nb of hidden layers too, and other parameters """
         train_NN(self.currentModelNNWid,self.epochNumber)
+
+    def on_click_updateepochs(self):
+        """ Updates the desired # of epochs for in-app training"""
+        self.epochNumber=int(self.textboxEpochs.text())
 
 class MainWindow(Qtw.QWidget):
     """ Main (and sole) window of the app """
@@ -154,8 +166,8 @@ class MainWindow(Qtw.QWidget):
         self.rZone=Qtw.QLabel('')
         self.mainLayout.addWidget(self.rZone,1,1)
 
-        # Showing NN zone #
-        self.nnZone=NNZone()
+        # Showing NN zone # WARNING: default model, don t forget to change 
+        self.nnZone=NNZone(tf.keras.models.Sequential())
         self.mainLayout.addWidget(self.nnZone,2,1)
 
         # Current model variable for NN #
@@ -169,11 +181,10 @@ class MainWindow(Qtw.QWidget):
         self.resetButton=Qtw.QPushButton('Reset', self)
         self.mainLayout.addWidget(self.resetButton, 0, 1)
 
-        # Connecting buttons to click/enter key #
+        # Connecting buttons to click #
         self.readButton.clicked.connect(self.on_click_read)
         self.resetButton.clicked.connect(self.on_click_reset)
-        self.readButtonShortcut=Qtw.QShortcut(QtGui.QKeySequence(QtCore.Qt.Key_Return), self.readButton)
-        self.readButtonShortcut.activated.connect(self.on_click_read)
+       
 
     def on_click_read(self):
         """ Feeds drawn character to neural network trained on
