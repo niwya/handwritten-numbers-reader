@@ -143,43 +143,71 @@ class NNZone(Qtw.QWidget):
         """ Updates the desired # of epochs for in-app training"""
         self.epochNumber=int(self.textboxEpochs.text())
 
-class MainWindow(Qtw.QWidget):
-    """ Main (and sole) window of the app """
+class ImportZone(Qtw.QWidget):
+    """ Widget to import pre-trained and pre-existing models """
     def __init__(self):
         super(Qtw.QWidget,self).__init__()
 
-        # Graphic initialization #
-        self.setFixedSize(500,300)
-        self.setWindowTitle("Handwritten numbers reader")
-        self.mainLayout=Qtw.QGridLayout(self)
-        self.setLayout(self.mainLayout)
+        self.izLayout=Qtw.QGridLayout(self)
+        self.setLayout(self.izLayout)
+
+        # Text label #
+        self.importLabel=Qtw.QLabel('Select model from file:')
+        self.izLayout.addWidget(self.importLabel,0,0)
+
+        # Text box #
+        self.fileSpace=Qtw.QLineEdit()
+        self.izLayout.addWidget(self.fileSpace,1,0)
+
+        # Browse button #
+        self.browseButton=Qtw.QPushButton('Browse',self)
+        self.izLayout.addWidget(self.browseButton,2,0)
+
+        # Connecting button to click #
+        self.browseButton.clicked.connect(self.on_click_browse)
+
+    def openFileNamesDialog(self):
+        # Modify to only allow .model format 
+        options = Qtw.QFileDialog.Options()
+        options |= Qtw.QFileDialog.DontUseNativeDialog
+        files, _ = Qtw.QFileDialog.getOpenFileNames(self,"Browse", "","All Files (*);;Python Files (*.py)", options=options)
+        if files:
+            print(files)
+    
+    def on_click_browse(self):
+        self.openFileNamesDialog()
+
+class ReadZone(Qtw.QWidget):
+    """ Widget to actually draw and read numbers"""
+    def __init__(self):
+
+        super(Qtw.QWidget,self).__init__()
+        self.readLayout=Qtw.QGridLayout()
+        self.setLayout(self.readLayout)
 
         # Showing instuctions label #
         self.instructLabel=Qtw.QLabel("Draw a number between 0 and 9 in the box below. \nTry to center it as much as possible.")
-        self.mainLayout.addWidget(self.instructLabel,0,0)
+        self.readLayout.addWidget(self.instructLabel,0,0)
 
         # Showing paint zone # 
         self.pZone=PaintZone()
-        self.mainLayout.addWidget(self.pZone,1,0)
-
-        # Showing result zone #
-        self.rZone=Qtw.QLabel('')
-        self.mainLayout.addWidget(self.rZone,1,1)
-
-        # Showing NN zone # WARNING: default model, don t forget to change 
-        self.nnZone=NNZone(tf.keras.models.Sequential())
-        self.mainLayout.addWidget(self.nnZone,2,1)
-
-        # Current model variable for NN #
-        self.currentModel=self.nnZone.currentModelNNWid
+        self.readLayout.addWidget(self.pZone,1,0)
 
         # Showing "Read" push button #
         self.readButton=Qtw.QPushButton('Read', self)
-        self.mainLayout.addWidget(self.readButton,2,0)
+        self.readLayout.addWidget(self.readButton,2,0)
 
         # Showing "Reset" push button # 
         self.resetButton=Qtw.QPushButton('Reset', self)
-        self.mainLayout.addWidget(self.resetButton, 0, 1)
+        self.readLayout.addWidget(self.resetButton, 3, 0)
+
+        # Showing result label #
+        self.rzoneLabel=Qtw.QLabel('Prediction is:')
+        self.readLayout.addWidget(self.rzoneLabel,4,0)
+
+        # Showing result zone #
+        self.rZone=Qtw.QLabel('')
+        self.readLayout.addWidget(self.rZone,5,0)
 
         # Connecting buttons to click #
         self.readButton.clicked.connect(self.on_click_read)
@@ -205,6 +233,32 @@ class MainWindow(Qtw.QWidget):
         try:
             os.remove('image.jpeg')
         except: None
+
+
+class MainWindow(Qtw.QWidget):
+    """ Main (and sole) window of the app """
+    def __init__(self):
+        super(Qtw.QWidget,self).__init__()
+
+        # Graphic initialization #
+        self.setFixedSize(800,700)
+        self.setWindowTitle("Handwritten numbers reader")
+        self.mainLayout=Qtw.QGridLayout(self)
+        self.setLayout(self.mainLayout)
+
+        #Showing read zone # 
+        self.rZone=ReadZone()
+        self.mainLayout.addWidget(self.rZone,0,0)
+
+        # Showing NN zone 
+        self.nnZone=NNZone(tf.keras.models.Sequential())
+        self.mainLayout.addWidget(self.nnZone,0,1)
+        self.currentModel=self.nnZone.currentModelNNWid
+
+        # Showing import zone #
+        self.iZone=ImportZone()
+        self.mainLayout.addWidget(self.iZone,0,2)
+
 
 
 if __name__ == '__main__':
